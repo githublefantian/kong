@@ -27,49 +27,59 @@ local default_metrics = {
   {
     name = "request_count",
     stat_type = "counter",
-    sample_rate = 1
+    sample_rate = 1,
+    tags = {"app:kong"}
   },
   {
     name = "latency",
-    stat_type = "timer"
+    stat_type = "timer",
+    tags = {"app:kong"}
   },
   {
     name = "request_size",
-    stat_type = "timer"
+    stat_type = "timer",
+    tags = {"app:kong"}
   },
   {
     name = "status_count",
     stat_type = "counter",
-    sample_rate = 1
+    sample_rate = 1,
+    tags = {"app:kong"}
   },
   {
     name = "response_size",
-    stat_type = "timer"
+    stat_type = "timer",
+    tags = {"app:kong"}
   },
   {
     name = "unique_users",
     stat_type = "set",
-    consumer_identifier = "custom_id"
+    consumer_identifier = "custom_id",
+    tags = {"app:kong"}
   },
   {
     name = "request_per_user",
     stat_type = "counter",
     sample_rate = 1,
-    consumer_identifier = "custom_id"
+    consumer_identifier = "custom_id",
+    tags = {"app:kong"}
   },
   {
     name = "upstream_latency",
-    stat_type = "timer"
+    stat_type = "timer",
+    tag = {"app:kong"}
   },
   {
     name = "kong_latency",
-    stat_type = "timer"
+    stat_type = "timer",
+    tags = {"app:kong"}
   },
   {
     name = "status_count_per_user",
     stat_type = "counter",
     sample_rate = 1,
-    consumer_identifier = "custom_id"
+    consumer_identifier = "custom_id",
+    tags = {"app:kong"}
   }
 }
 
@@ -88,11 +98,26 @@ local function check_value(table, element)
   return false
 end
 
+-- entries must have colons to set the key and value apart
+local function check_tag_value(value)
+  if value == nil then return true end
+  for i, entry in ipairs(value) do
+    local ok = find(entry, ":")
+    if ok then 
+      local _,next = pl_utils.splitv(entry, ':')
+      if not next or #next == 0 then
+        return false, "(key '"..entry.."' has no value)"
+      end
+    end
+  end
+  return true
+end
+
 local function check_schema(value)
   for _, entry in ipairs(value) do
     local name_ok = check_value(metrics, entry.name)
     local type_ok = check_value(stat_types, entry.stat_type)
-    
+    local tag_ok, tag_error = check_tag_value(entry.tags)
     if entry.name == nil or entry.stat_type == nil then
       return false, "name and stat_type must be defined for all stats"
     end
@@ -101,6 +126,12 @@ local function check_schema(value)
     end
     if not type_ok then
       return false, "unrecognized stat_type: "..entry.stat_type
+    end
+    if not tag_ok then
+      return false, "malformed tags:"..entry.tags..tag_error..". Tags must be list of tags Key[:Value]"
+    end
+    if entry.tag == nil  and check_tag_value()then
+      return false, "name and stat_type must be defined for all stats"
     end
     if entry.name == "unique_users" and entry.stat_type ~= "set" then
       return false, "unique_users metric only works with stat_type 'set'"
@@ -124,40 +155,10 @@ local function check_schema(value)
   return true
 end
 
--- entries must have colons to set the key and value apart
-local function check_for_value(value)
-  for i, entry in ipairs(value) do
-    local ok = find(entry, ":")
-    if ok then 
-      local _,next = pl_utils.splitv(entry, ':')
-      if not next or #next == 0 then
-        return false, "key '"..entry.."' has no value, "
-      end
-    end
-  end
-  return true
-end
-
 return {
   fields = {
     host = {required = true, type = "string", default = "localhost"},
     port = {required = true, type = "number", default = 8125},
-    metrics = {required = true, type = "array", enum = metrics, default = default_metrics, check_schema},
-    tags = {
-      type = "table",
-      schema = {
-        fields = {
-          request_count = {type = "array", default = {}, func = check_for_value},
-          latency = {type = "array", default = {}, func = check_for_value},
-          request_size = {type = "array", default = {}, func = check_for_value},
-          status_count = {type = "array", default = {}, func = check_for_value},
-          response_size = {type = "array", default = {}, func = check_for_value},
-          unique_users = {type = "array", default = {}, func = check_for_value},
-          request_per_user = {type = "array", default = {}, func = check_for_value},
-          upstream_latency = {type = "array", default = {}, func = check_for_value}
-        }
-      }
-    },
-    timeout = {type = "number", default = 10000}
+    metrics = {required = true, type = "array", enum = metrics, default = default_metrics, check_schema}
   }
 }

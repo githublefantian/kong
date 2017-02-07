@@ -10,7 +10,6 @@ statsd_mt.__index = statsd_mt
 
 function statsd_mt:new(conf)
   local sock = ngx_socket_udp()
-  sock:settimeout(conf.timeout)
   local ok, err = sock:setpeername(conf.host, conf.port)
   if not ok then
     return nil, "failed to connect to "..conf.host..":"..conf.port..": "..err
@@ -75,7 +74,7 @@ function statsd_mt:counter(stat, value, sample_rate, tags)
   return self:send_statsd(stat, value, "c", sample_rate, tags)
 end
 
-function statsd_mt:timer(stat, ms, tags)
+function statsd_mt:timer(stat, ms, sample_rate, tags)
   return self:send_statsd(stat, ms, "ms", nil, tags)
 end
 
@@ -87,7 +86,7 @@ function statsd_mt:meter(stat, value, tags)
   return self:send_statsd(stat, value, "m", nil, tags)
 end
 
-function statsd_mt:set(stat, value, tags)
+function statsd_mt:set(stat, value, sample_rate, tags)
   return self:send_statsd(stat, value, "s", nil, tags)
 end
 
