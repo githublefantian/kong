@@ -72,6 +72,7 @@ function statsd_mt:gauge(stat, value, sample_rate, tags)
 end
 
 function statsd_mt:counter(stat, value, sample_rate, tags)
+  print("***************************************")
   return self:send_statsd(stat, value, "c", sample_rate, tags)
 end
 
