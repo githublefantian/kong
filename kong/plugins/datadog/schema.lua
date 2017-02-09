@@ -128,10 +128,7 @@ local function check_schema(value)
       return false, "unrecognized stat_type: "..entry.stat_type
     end
     if not tag_ok then
-      return false, "malformed tags:"..entry.tags..tag_error..". Tags must be list of tags Key[:Value]"
-    end
-    if entry.tag == nil  and check_tag_value()then
-      return false, "name and stat_type must be defined for all stats"
+      return false, "malformed tags:["..tag_error.."]. Tags must be list of key[:value]"
     end
     if entry.name == "unique_users" and entry.stat_type ~= "set" then
       return false, "unique_users metric only works with stat_type 'set'"
@@ -159,6 +156,6 @@ return {
   fields = {
     host = {required = true, type = "string", default = "localhost"},
     port = {required = true, type = "number", default = 8125},
-    metrics = {required = true, type = "array", default = default_metrics, check_schema}
+    metrics = {required = true, type = "array", default = default_metrics, func = check_schema}
   }
 }
